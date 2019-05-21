@@ -1,0 +1,115 @@
+@import kafka.manager.model.ActorModel.BVView
+@(cluster:String, brokerViews :Map[Int, BVView])(implicit messages: play.api.i18n.Messages)
+
+<script src='@routes.Assets.versioned("echarts/javascripts/echarts.min.js")'></script>
+<div id="in" style="height:300px"></div>
+
+<script type="text/javascript">
+    var str = new String("@{services.Util.getBrokersArray(brokerViews)}").replace(/&#x27;/g,"\'")
+    var myChart = echarts.init(document.getElementById('in'));
+    var option = {
+        title : {
+            text: 'Bytes In (KB)',
+            subtext: 'All brokers'
+        },
+        tooltip : {
+            trigger: 'axis'
+        },
+        legend: {
+            data: str
+        },
+        toolbox: {
+            show : true,
+
+        },
+        calculable : true,
+        xAxis : [
+            {
+                type : 'category',
+                boundaryGap : false,
+                data :  [@Html(brokerViews(brokerViews.keys.last).bytesInPerMinCountHistory.map(_.map(v => s"'${v.date.toString("HH:mm:ss")}'").mkString(",")).getOrElse(""))]
+            }
+        ],
+        yAxis : [
+            {
+                type : 'value',
+                scale : 'true'
+            }
+        ],
+        series : [
+            @for((k,v) <- brokerViews){
+                @if(k!=brokerViews.keys.last){
+                    {
+                        name:@k,
+                        type:'line',
+                        smooth:true,
+                        data:[@v.bytesInPerMinCountHistory.map(_.map(_.count).mkString(","))]
+                    },
+                }
+            }
+            {
+                name: @brokerViews.keys.last,
+                type:'line',
+                smooth:true,
+                data:[@brokerViews(brokerViews.keys.last).bytesInPerMinCountHistory.map(_.map(_.count).mkString(","))]
+            }
+        ]
+    };
+    myChart.setOption(option);
+</script>
+
+<div id="out" style="height:300px"></div>
+
+<script type="text/javascript">
+    var str = new String("@{services.Util.getBrokersArray(brokerViews)}").replace(/&#x27;/g,"\'")
+    var myChart = echarts.init(document.getElementById('out'));
+    var option = {
+        title : {
+            text: 'Bytes Out (KB)',
+            subtext: 'All brokers'
+        },
+        tooltip : {
+            trigger: 'axis'
+        },
+        legend: {
+            data: str
+        },
+        toolbox: {
+            show : true,
+
+        },
+        calculable : true,
+        xAxis : [
+            {
+                type : 'category',
+                boundaryGap : false,
+                data :  [@Html(brokerViews(brokerViews.keys.last).bytesOutPerMinCountHistory.map(_.map(v => s"'${v.date.toString("HH:mm:ss")}'").mkString(",")).getOrElse(""))]
+            }
+        ],
+        yAxis : [
+            {
+                type : 'value',
+                 scale : 'true'
+            }
+        ],
+        series : [
+            @for((k,v) <- brokerViews){
+                @if(k!=brokerViews.keys.last){
+                    {
+                        name:@k,
+                        type:'line',
+                        smooth:true,
+                        data:[@v.bytesOutPerMinCountHistory.map(_.map(_.count).mkString(","))]
+                    },
+                }
+            }
+            {
+                name: @brokerViews.keys.last,
+                type:'line',
+                smooth:true,
+                data:[@brokerViews(brokerViews.keys.last).bytesOutPerMinCountHistory.map(_.map(_.count).mkString(","))]
+            }
+        ]
+    };
+    myChart.setOption(option);
+</script>

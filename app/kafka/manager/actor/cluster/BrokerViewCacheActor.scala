@@ -67,6 +67,10 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
 
   private[this] var brokerMessagesPerSecCountHistory : Map[Int, Queue[BrokerMessagesPerSecCount]] = Map.empty
 
+  private[this] var brokerBytesInPerMinCountHistory : Map[Int, Queue[BrokerInOutPerSecCount]] = Map.empty
+
+  private[this] var brokerBytesOutPerMinCountHistory : Map[Int, Queue[BrokerInOutPerSecCount]] = Map.empty
+
   override def preStart() = {
     log.info("Started actor %s".format(self.path))
     log.info("Scheduling updater for %s".format(config.updatePeriod))
@@ -107,12 +111,15 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
           BigDecimal(metrics.bytesOutPerSec.oneMinuteRate / cbm.bytesOutPerSec.oneMinuteRate * 100D).setScale(3, BigDecimal.RoundingMode.HALF_UP)
         } else ZERO
         BrokerClusterStats(perMessages, perIncoming, perOutgoing)
-      }
+    }
     val messagesPerSecCountHistory = brokerMessagesPerSecCountHistory.get(id)
+    val bytesInPerMinCountHistory = brokerBytesInPerMinCountHistory.get(id)
+    val bytesOutPerMinCountHistory = brokerBytesOutPerMinCountHistory.get(id)
+
     if(bcs.isDefined) {
-      bv.copy(stats = bcs, messagesPerSecCountHistory = messagesPerSecCountHistory)
+      bv.copy(stats = bcs, messagesPerSecCountHistory = messagesPerSecCountHistory, bytesInPerMinCountHistory = bytesInPerMinCountHistory, bytesOutPerMinCountHistory = bytesOutPerMinCountHistory)
     } else {
-      bv.copy(messagesPerSecCountHistory = messagesPerSecCountHistory)
+      bv.copy(messagesPerSecCountHistory = messagesPerSecCountHistory, bytesInPerMinCountHistory = bytesInPerMinCountHistory, bytesOutPerMinCountHistory = bytesOutPerMinCountHistory)
     }
   }
 
@@ -182,11 +189,29 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
         brokerTopicPartitions.put(id, updatedBVView)
         val now = DateTime.now()
         val messagesCount = BrokerMessagesPerSecCount(now, metrics.messagesInPerSec.count)
+        val byteIn = BrokerInOutPerSecCount(now, if(metrics.bytesInPerSec.oneMinuteRate > 0)
+          BigDecimal(metrics.bytesInPerSec.oneMinuteRate / 1024).setScale(2, BigDecimal.RoundingMode.HALF_UP).doubleValue()
+        else ZERO.doubleValue()) //KB
+        val byteOut = BrokerInOutPerSecCount(now, if(metrics.bytesOutPerSec.oneMinuteRate > 0)
+          BigDecimal(metrics.bytesOutPerSec.oneMinuteRate / 1024).setScale(2, BigDecimal.RoundingMode.HALF_UP).doubleValue()
+        else ZERO.doubleValue()) //KB
         brokerMessagesPerSecCountHistory += (id -> brokerMessagesPerSecCountHistory.get(id).map {
           history =>
-            history.enqueueFinite(messagesCount, 10)
+            history.enqueueFinite(messagesCount, 30)
         }.getOrElse {
           Queue(messagesCount)
+        })
+        brokerBytesInPerMinCountHistory += (id -> brokerBytesInPerMinCountHistory.get(id).map {
+          history =>
+            history.enqueueFinite(byteIn, 60)
+        }.getOrElse {
+          Queue(byteIn)
+        })
+        brokerBytesOutPerMinCountHistory += (id -> brokerBytesOutPerMinCountHistory.get(id).map {
+          history =>
+            history.enqueueFinite(byteOut, 60)
+        }.getOrElse {
+          Queue(byteOut)
         })
 
       case BVUpdateBrokerTopicPartitionSizes(id, logInfo) =>

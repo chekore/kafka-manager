@@ -52,6 +52,8 @@ object ActorModel {
   case class BVView(topicPartitions: Map[TopicIdentity, BrokerTopicInfo], clusterContext: ClusterContext,
                     metrics: Option[BrokerMetrics] = None,
                     messagesPerSecCountHistory: Option[Queue[BrokerMessagesPerSecCount]] = None,
+                    bytesInPerMinCountHistory: Option[Queue[BrokerInOutPerSecCount]] = None,
+                    bytesOutPerMinCountHistory: Option[Queue[BrokerInOutPerSecCount]] = None,
                     stats: Option[BrokerClusterStats] = None) extends QueryResponse {
     def numTopics : Int = topicPartitions.size
     def numPartitions : Int = topicPartitions.values.foldLeft(0)((acc,i) => acc + i.partitions.size)
@@ -672,6 +674,11 @@ import scala.language.reflectiveCalls
 
   case class BrokerMessagesPerSecCount(date: DateTime,
                                        count: Long)
+
+  /** start */
+  case class BrokerInOutPerSecCount(date: DateTime,
+                                    count: Double)
+  /** end */
 
   case class BrokerMetrics(bytesInPerSec: MeterMetric,
                            bytesOutPerSec: MeterMetric,

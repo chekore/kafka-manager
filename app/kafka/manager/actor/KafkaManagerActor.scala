@@ -29,7 +29,7 @@ import scala.util.{Failure, Success, Try}
  */
 
 object KafkaManagerActor {
-  val ZkRoot : String = "/kafka-manager"
+  val ZkRoot : String = "/kafka-manager-pro"
 
   def getClusterPath(config: ClusterConfig) : String = s"$ZkRoot/${config.name}"
 

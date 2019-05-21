@@ -210,6 +210,14 @@ class Cluster (val cc: ControllerComponents, val kafkaManagerContext: KafkaManag
     }
   }
 
+  /***********************得到所有节点的bvview信息*****************/
+  def allBrokersBytesList(c: String) = Action.async { implicit request =>
+    kafkaManager.getBrokersView(c).map { view =>
+      Ok(views.html.broker.allBrokerByteList(c, view))
+    }
+  }
+  /*************************** end *****************************/
+  
   def addCluster = Action.async { implicit request: RequestHeader =>
     featureGate(KMClusterManagerFeature) {
       Future.successful(Ok(views.html.cluster.addCluster(clusterConfigForm.fill(defaultClusterConfig))).withHeaders("X-Frame-Options" -> "SAMEORIGIN"))

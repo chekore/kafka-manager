@@ -1,0 +1,23 @@
+@import scalaz.{\/}
+@import kafka.manager.ApiError
+@import kafka.manager.model.ActorModel.BVView
+
+@(cluster:String, errorOrBrokers: ApiError \/Map[Int, BVView]
+)(implicit af: features.ApplicationFeatures, messages: play.api.i18n.Messages, menus: models.navigation.Menus)
+
+
+@brokerScripts = {
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#broker-table').DataTable();
+        } );
+    </script>
+}
+
+<div class="col-md-12 un-pad-me">
+    @errorOrBrokers.fold( views.html.errors.onApiError(_), views.html.broker.allBrokerBytesContent(cluster,_))
+</div>
+
+
+
+
